@@ -39,6 +39,12 @@ class Settings(BaseSettings):
         validation_alias="NOTION_DISCOVERY_MAX_DEPTH",
     )
 
+    gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
+    gemini_model: str = Field(
+        default="gemini-2.5-flash",
+        validation_alias="GEMINI_MODEL",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

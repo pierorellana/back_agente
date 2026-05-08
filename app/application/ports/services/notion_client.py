@@ -23,6 +23,13 @@ class NotionClientPort(Protocol):
     ) -> list[dict[str, Any]]:
         pass
 
+    def create_page(
+        self,
+        parent_data_source_id: str,
+        properties: dict[str, Any],
+    ) -> dict[str, Any]:
+        pass
+
     def discover_child_databases(
         self,
         root_block_id: str,

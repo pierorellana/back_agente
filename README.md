@@ -52,6 +52,7 @@ uvicorn app.main:app --reload
 - Swagger: http://localhost:8000/docs
 - Notion connection check: http://localhost:8000/api/notion/connection
 - Notion tables discovery: http://localhost:8000/api/notion/tables/discover
+- Care estimate flow: POST http://localhost:8000/api/care-estimates
 - Insurance providers: http://localhost:8000/api/insurance-providers
 - Insurance plans: http://localhost:8000/api/insurance-plans
 - Users: http://localhost:8000/api/users
@@ -59,6 +60,9 @@ uvicorn app.main:app --reload
 - Hospitals: http://localhost:8000/api/hospitals
 - Symptoms: http://localhost:8000/api/symptoms
 - Hospital specialties: http://localhost:8000/api/hospital-specialties
+- Symptom specialty map: http://localhost:8000/api/symptom-specialty-map
+- Insurance network: http://localhost:8000/api/insurance-network
+- Emergency keywords: http://localhost:8000/api/emergency-keywords
 
 Los endpoints de catalogos usan `GeneralResponse`, y `data` contiene directamente el arreglo:
 
@@ -75,6 +79,65 @@ Los endpoints de catalogos usan `GeneralResponse`, y `data` contiene directament
   "error": null
 }
 ```
+
+## Endpoint principal del hackathon
+
+El flujo principal para Angular es:
+
+```text
+POST /api/care-estimates
+```
+
+Request:
+
+```json
+{
+  "document_number": "0922334455",
+  "symptom_text": "Tengo dolor en el pecho y me cuesta respirar."
+}
+```
+
+Resumen del flujo:
+
+```text
+Buscar paciente -> validar plan activo -> revisar EMERGENCY_KEYWORDS ->
+inferir especialidad con Gemini -> calcular copago -> rankear top 3 hospitales ->
+redactar recomendacion -> guardar historial en Notion
+```
+
+## Tablas de Notion recomendadas para el MVP
+
+Mantener:
+
+- `USERS`
+- `INSURANCE_PLANS`
+- `SPECIALTIES`
+- `HOSPITALS`
+- `SYMPTOM_SPECIALTY_MAP`
+- `COVERAGES`
+- `INSURANCE_NETWORK`
+- `CONSULTATION_PRICES`
+- `EMERGENCY_KEYWORDS`
+- `ESTIMATION_HISTORY`
+
+Opcionales o prescindibles para este MVP:
+
+- `INSURANCE_PROVIDERS`
+- `SYMPTOMS`
+- `HOSPITAL_SPECIALTIES`
+
+La implementacion nueva ya no depende de esas 3 tablas opcionales para resolver el flujo principal.
+
+## Gemini
+
+Para este MVP se usa `gemini-2.5-flash` por defecto. Solo se utiliza para:
+
+- interpretar el texto libre del paciente
+- elegir una especialidad probable entre las especialidades validas de Notion
+- redactar la explicacion final en lenguaje natural
+
+Si `GEMINI_API_KEY` no esta configurado, el backend hace fallback a reglas basadas en
+`SYMPTOM_SPECIALTY_MAP` y a una explicacion deterministica.
 
 ## Mapa de tablas de Notion
 

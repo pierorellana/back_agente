@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.exception_handlers import register_exception_handlers
+from app.api.routers.care_estimates import router as care_estimates_router
 from app.api.routers.insurance import router as insurance_router
 from app.api.routers.notion import router as notion_router
 from app.infrastructure.config.settings import Settings, get_settings
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     app.include_router(notion_router, prefix=settings.api_prefix)
     app.include_router(insurance_router, prefix=settings.api_prefix)
+    app.include_router(care_estimates_router, prefix=settings.api_prefix)
 
     return app
 

@@ -56,3 +56,24 @@ def list_hospital_specialties(
     service: Annotated[InsuranceCatalogService, Depends(get_insurance_catalog_service)],
 ) -> GeneralResponse[list[dict]]:
     return service.list_hospital_specialties()
+
+
+@router.get("/symptom-specialty-map", response_model=GeneralResponse[list[dict]])
+def list_symptom_specialty_map(
+    service: Annotated[InsuranceCatalogService, Depends(get_insurance_catalog_service)],
+) -> GeneralResponse[list[dict]]:
+    return service.list_symptom_specialty_map()
+
+
+@router.get("/insurance-network", response_model=GeneralResponse[list[dict]])
+def list_insurance_network(
+    service: Annotated[InsuranceCatalogService, Depends(get_insurance_catalog_service)],
+) -> GeneralResponse[list[dict]]:
+    return service.list_insurance_network()
+
+
+@router.get("/emergency-keywords", response_model=GeneralResponse[list[dict]])
+def list_emergency_keywords(
+    service: Annotated[InsuranceCatalogService, Depends(get_insurance_catalog_service)],
+) -> GeneralResponse[list[dict]]:
+    return service.list_emergency_keywords()

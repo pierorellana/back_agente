@@ -39,6 +39,24 @@ class FakeInsuranceCatalogService:
             [{"record_name": "Hospital specialty demo"}],
         )
 
+    def list_symptom_specialty_map(self) -> GeneralResponse[list[dict[str, Any]]]:
+        return _fake_catalog_response(
+            "Symptom specialty map loaded",
+            [{"map_id": "map_001", "Name": "Symptom to specialty demo"}],
+        )
+
+    def list_insurance_network(self) -> GeneralResponse[list[dict[str, Any]]]:
+        return _fake_catalog_response(
+            "Insurance network loaded",
+            [{"network_id": "network_001", "Name": "Insurance network demo"}],
+        )
+
+    def list_emergency_keywords(self) -> GeneralResponse[list[dict[str, Any]]]:
+        return _fake_catalog_response(
+            "Emergency keywords loaded",
+            [{"emergency_keyword_id": "emg_001", "phrase": "chest pain"}],
+        )
+
 
 def test_list_insurance_providers_endpoint() -> None:
     from app.api.deps import get_insurance_catalog_service
@@ -88,6 +106,18 @@ def test_list_insurance_plans_endpoint() -> None:
         ("/api/hospitals", {"hospital_id": "hosp_001"}),
         ("/api/symptoms", {"symptom_id": "symp_001"}),
         ("/api/hospital-specialties", {"record_name": "Hospital specialty demo"}),
+        (
+            "/api/symptom-specialty-map",
+            {"map_id": "map_001", "Name": "Symptom to specialty demo"},
+        ),
+        (
+            "/api/insurance-network",
+            {"network_id": "network_001", "Name": "Insurance network demo"},
+        ),
+        (
+            "/api/emergency-keywords",
+            {"emergency_keyword_id": "emg_001", "phrase": "chest pain"},
+        ),
     ],
 )
 def test_list_catalog_endpoints(path: str, expected_item: dict[str, Any]) -> None:

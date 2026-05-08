@@ -151,6 +151,30 @@ class HttpxNotionClient:
                 )
                 return results
 
+    def create_page(
+        self,
+        parent_data_source_id: str,
+        properties: dict[str, Any],
+    ) -> dict[str, Any]:
+        logger.info(
+            "notion_create_page_started parent_data_source_id=%s properties_count=%s",
+            parent_data_source_id,
+            len(properties),
+        )
+        response = self._send(
+            "POST",
+            "/pages",
+            "create_page",
+            json={
+                "parent": {
+                    "type": "data_source_id",
+                    "data_source_id": parent_data_source_id,
+                },
+                "properties": properties,
+            },
+        )
+        return self._handle_response(response, "create_page")
+
     def discover_child_databases(
         self,
         root_block_id: str,

@@ -65,6 +65,24 @@ class InsuranceCatalogService:
             success_message="Hospital specialties loaded",
         )
 
+    def list_symptom_specialty_map(self) -> GeneralResponse[list[dict[str, Any]]]:
+        return self._list_catalog(
+            table_key="symptom_specialty_map",
+            success_message="Symptom specialty map loaded",
+        )
+
+    def list_insurance_network(self) -> GeneralResponse[list[dict[str, Any]]]:
+        return self._list_catalog(
+            table_key="insurance_network",
+            success_message="Insurance network loaded",
+        )
+
+    def list_emergency_keywords(self) -> GeneralResponse[list[dict[str, Any]]]:
+        return self._list_catalog(
+            table_key="emergency_keywords",
+            success_message="Emergency keywords loaded",
+        )
+
     def _list_catalog(
         self,
         table_key: str,
