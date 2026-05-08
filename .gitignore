@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# Env/config
+.env
+.env.*
+!.env.example
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE/OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime files
+storage/
+logs/
+
+# Alembic generated revisions are project code; keep the folder, ignore temp artifacts only.
+*.db
+*.sqlite
+*.sqlite3

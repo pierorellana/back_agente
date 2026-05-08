@@ -1,0 +1,373 @@
+{
+  "root_page_id": "0d2ea5c2-bc95-4dff-b871-d7c4565887e9",
+  "tables_count": 13,
+  "tables": [
+    {
+      "key": "insurance_providers",
+      "title": "INSURANCE_PROVIDERS",
+      "database_id": "4ceaaeb9-545c-4512-a92d-ccffc5e4f1e7",
+      "data_source_id": "71ec0b96-f2b8-48f2-8a0b-dc511fff699d",
+      "data_source_name": "INSURANCE_PROVIDERS",
+      "properties": [
+        "active",
+        "country",
+        "created_at",
+        "plans",
+        "provider_id",
+        "provider_name",
+        "support_phone",
+        "website"
+      ],
+      "property_types": {
+        "website": "url",
+        "plans": "relation",
+        "provider_id": "rich_text",
+        "support_phone": "phone_number",
+        "active": "checkbox",
+        "country": "select",
+        "created_at": "created_time",
+        "provider_name": "title"
+      }
+    },
+    {
+      "key": "insurance_plans",
+      "title": "INSURANCE_PLANS",
+      "database_id": "3a5bbb2a-fafd-4c42-8a89-6338ad4ceb5b",
+      "data_source_id": "ca090935-b9a2-414a-b930-87648c03aff2",
+      "data_source_name": "INSURANCE_PLANS",
+      "properties": [
+        "active",
+        "annual_deductible_individual",
+        "annual_oop_max_individual",
+        "created_at",
+        "currency",
+        "default_coinsurance_in_network_pct",
+        "default_coinsurance_out_network_pct",
+        "network_policy",
+        "notes",
+        "plan_id",
+        "plan_name",
+        "plan_type",
+        "provider",
+        "users"
+      ],
+      "property_types": {
+        "annual_oop_max_individual": "number",
+        "annual_deductible_individual": "number",
+        "network_policy": "select",
+        "provider": "relation",
+        "plan_id": "rich_text",
+        "plan_type": "select",
+        "notes": "rich_text",
+        "default_coinsurance_out_network_pct": "number",
+        "created_at": "created_time",
+        "active": "checkbox",
+        "currency": "select",
+        "users": "relation",
+        "default_coinsurance_in_network_pct": "number",
+        "plan_name": "title"
+      }
+    },
+    {
+      "key": "users",
+      "title": "USERS",
+      "database_id": "9c07802f-ec37-429e-a5ce-1795f70c7643",
+      "data_source_id": "e31703c7-1910-4c41-8156-a1e4a50d438e",
+      "data_source_name": "USERS",
+      "properties": [
+        "active",
+        "created_at",
+        "date_of_birth",
+        "email",
+        "full_name",
+        "gender",
+        "insurance_plan",
+        "member_id",
+        "user_id"
+      ],
+      "property_types": {
+        "insurance_plan": "relation",
+        "created_at": "created_time",
+        "active": "checkbox",
+        "date_of_birth": "date",
+        "member_id": "rich_text",
+        "gender": "select",
+        "user_id": "rich_text",
+        "email": "email",
+        "full_name": "title"
+      }
+    },
+    {
+      "key": "specialties",
+      "title": "SPECIALTIES",
+      "database_id": "5b8acafb-9d3d-43ef-845c-2fb8b8c1bd62",
+      "data_source_id": "e862af81-8e05-41e6-84d5-31ca9ecc76f1",
+      "data_source_name": "SPECIALTIES",
+      "properties": [
+        "active",
+        "created_at",
+        "description",
+        "is_emergency_specialty",
+        "specialty_id",
+        "specialty_name"
+      ],
+      "property_types": {
+        "is_emergency_specialty": "checkbox",
+        "specialty_id": "rich_text",
+        "created_at": "created_time",
+        "description": "rich_text",
+        "active": "checkbox",
+        "specialty_name": "title"
+      }
+    },
+    {
+      "key": "hospitals",
+      "title": "HOSPITALS",
+      "database_id": "76caa761-26bf-4f3b-bcbf-c59172643c46",
+      "data_source_id": "175aff33-8d2d-403a-9744-f92144a2eb9f",
+      "data_source_name": "HOSPITALS",
+      "properties": [
+        "active",
+        "address_line",
+        "city",
+        "country",
+        "created_at",
+        "hospital_id",
+        "hospital_name",
+        "latitude",
+        "longitude",
+        "phone",
+        "registry_id",
+        "state_region",
+        "website"
+      ],
+      "property_types": {
+        "created_at": "created_time",
+        "phone": "phone_number",
+        "hospital_id": "rich_text",
+        "city": "rich_text",
+        "latitude": "number",
+        "country": "select",
+        "website": "url",
+        "state_region": "rich_text",
+        "registry_id": "rich_text",
+        "longitude": "number",
+        "address_line": "rich_text",
+        "active": "checkbox",
+        "hospital_name": "title"
+      }
+    },
+    {
+      "key": "symptoms",
+      "title": "SYMPTOMS",
+      "database_id": "263c7edd-23fd-4b6b-9715-5c4d0d84a466",
+      "data_source_id": "f26bfcad-d407-4224-ab51-d5724f0017be",
+      "data_source_name": "SYMPTOMS",
+      "properties": [
+        "active",
+        "body_system",
+        "created_at",
+        "default_emergency_level",
+        "symptom_id",
+        "symptom_name",
+        "synonyms"
+      ],
+      "property_types": {
+        "synonyms": "multi_select",
+        "body_system": "select",
+        "created_at": "created_time",
+        "active": "checkbox",
+        "symptom_id": "rich_text",
+        "default_emergency_level": "select",
+        "symptom_name": "title"
+      }
+    },
+    {
+      "key": "hospital_specialties",
+      "title": "HOSPITAL_SPECIALTIES",
+      "database_id": "e7ded4de-0caa-4e8b-ac55-585f71513042",
+      "data_source_id": "e94fed86-681d-4f37-8e11-dd987b1da0e7",
+      "data_source_name": "HOSPITAL_SPECIALTIES",
+      "properties": [
+        "active",
+        "availability_status",
+        "created_at",
+        "hospital",
+        "notes",
+        "record_name",
+        "specialty"
+      ],
+      "property_types": {
+        "hospital": "relation",
+        "specialty": "relation",
+        "notes": "rich_text",
+        "availability_status": "status",
+        "created_at": "created_time",
+        "active": "checkbox",
+        "record_name": "title"
+      }
+    },
+    {
+      "key": "symptom_specialty_map",
+      "title": "SYMPTOM_SPECIALTY_MAP",
+      "database_id": "35a3798b-465a-8024-97ea-cde8779d9459",
+      "data_source_id": "35a3798b-465a-8171-98ff-000b3e52f62c",
+      "data_source_name": "SYMPTOM_SPECIALTY_MAP",
+      "properties": [
+        "Name",
+        "active",
+        "ai_weight",
+        "confidence_score",
+        "emergency_level",
+        "keywords",
+        "map_id",
+        "specialty",
+        "symptom"
+      ],
+      "property_types": {
+        "map_id": "rich_text",
+        "symptom": "relation",
+        "emergency_level": "select",
+        "specialty": "relation",
+        "keywords": "multi_select",
+        "ai_weight": "number",
+        "confidence_score": "number",
+        "active": "checkbox",
+        "Name": "title"
+      }
+    },
+    {
+      "key": "coverages",
+      "title": "COVERAGES",
+      "database_id": "35a3798b-465a-8072-935f-f063830df8ed",
+      "data_source_id": "35a3798b-465a-8116-8d68-000bea240bcb",
+      "data_source_name": "COVERAGES",
+      "properties": [
+        "Name",
+        "active",
+        "annual_visit_limit",
+        "coverage_id",
+        "coverage_status",
+        "in_network_copay_amount",
+        "in_network_patient_percentage",
+        "out_network_patient_percentage",
+        "plan",
+        "specialty"
+      ],
+      "property_types": {
+        "coverage_id": "rich_text",
+        "plan": "relation",
+        "in_network_patient_percentage": "number",
+        "specialty": "relation",
+        "out_network_patient_percentage": "number",
+        "in_network_copay_amount": "number",
+        "coverage_status": "select",
+        "annual_visit_limit": "number",
+        "active": "checkbox",
+        "Name": "title"
+      }
+    },
+    {
+      "key": "insurance_network",
+      "title": "INSURANCE_NETWORK",
+      "database_id": "35a3798b-465a-80c2-bfd0-e009b4424016",
+      "data_source_id": "35a3798b-465a-8147-998e-000bf1f43248",
+      "data_source_name": "INSURANCE_NETWORK",
+      "properties": [
+        "Name",
+        "active",
+        "hospital",
+        "network_id",
+        "network_status",
+        "out_of_network_penalty_multiplier",
+        "plan"
+      ],
+      "property_types": {
+        "network_id": "rich_text",
+        "plan": "relation",
+        "hospital": "relation",
+        "out_of_network_penalty_multiplier": "number",
+        "network_status": "select",
+        "active": "checkbox",
+        "Name": "title"
+      }
+    },
+    {
+      "key": "consultation_prices",
+      "title": "CONSULTATION_PRICES",
+      "database_id": "35a3798b-465a-80fb-9c64-f50423cf5fe8",
+      "data_source_id": "35a3798b-465a-817b-8591-000bc4a5cdb5",
+      "data_source_name": "CONSULTATION_PRICES",
+      "properties": [
+        "Name",
+        "active",
+        "base_price",
+        "currency",
+        "hospital",
+        "price_id",
+        "specialty"
+      ],
+      "property_types": {
+        "price_id": "rich_text",
+        "currency": "select",
+        "hospital": "relation",
+        "base_price": "number",
+        "specialty": "relation",
+        "active": "checkbox",
+        "Name": "title"
+      }
+    },
+    {
+      "key": "emergency_keywords",
+      "title": "EMERGENCY_KEYWORDS",
+      "database_id": "35a3798b-465a-8039-8b83-e2b65e88fef3",
+      "data_source_id": "35a3798b-465a-8104-863f-000b05084352",
+      "data_source_name": "EMERGENCY_KEYWORDS",
+      "properties": [
+        "active",
+        "emergency_keyword_id",
+        "match_type",
+        "phrase",
+        "severity_level",
+        "suggested_specialty"
+      ],
+      "property_types": {
+        "emergency_keyword_id": "rich_text",
+        "severity_level": "select",
+        "suggested_specialty": "relation",
+        "match_type": "select",
+        "active": "checkbox",
+        "phrase": "title"
+      }
+    },
+    {
+      "key": "estimation_history",
+      "title": "ESTIMATION_HISTORY",
+      "database_id": "35a3798b-465a-80a7-915a-d5bf0a2e01ae",
+      "data_source_id": "35a3798b-465a-814b-8235-000ba1acc561",
+      "data_source_name": "ESTIMATION_HISTORY",
+      "properties": [
+        "chosen_hospital",
+        "chosen_specialty",
+        "created_at",
+        "emergency_detected",
+        "estimated_patient_payment",
+        "estimation_id",
+        "input_text",
+        "user"
+      ],
+      "property_types": {
+        "emergency_detected": "checkbox",
+        "user": "relation",
+        "input_text": "rich_text",
+        "chosen_hospital": "relation",
+        "chosen_specialty": "relation",
+        "estimated_patient_payment": "number",
+        "created_at": "date",
+        "estimation_id": "title"
+      }
+    }
+  ],
+  "notion_version": "2026-03-11",
+  "map_path": "config/notion_tables.json"
+}
