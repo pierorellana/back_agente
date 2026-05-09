@@ -1,5 +1,8 @@
 import logging
+import re
+import unicodedata
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from typing import Any
 
 from app.application.ports.services.gemini_client import GeminiClientPort
@@ -15,6 +18,63 @@ _SEVERITY_RANK = {
     "medium": 2,
     "moderate": 2,
     "low": 1,
+}
+_GENERAL_MEDICINE_ALIASES = (
+    "medicina general",
+    "medico general",
+    "general medicine",
+    "medicina familiar",
+    "family medicine",
+)
+_GEMINI_MIN_SPECIALTY_CONFIDENCE = 0.35
+_LABEL_SIMILARITY_THRESHOLD = 0.62
+_TEXT_SIMILARITY_THRESHOLD = 0.5
+_STOPWORDS = {
+    "a",
+    "al",
+    "atencion",
+    "cita",
+    "con",
+    "consulta",
+    "de",
+    "del",
+    "doctor",
+    "doctora",
+    "dolor",
+    "duele",
+    "el",
+    "en",
+    "es",
+    "esta",
+    "estoy",
+    "la",
+    "las",
+    "los",
+    "malestar",
+    "me",
+    "medica",
+    "medico",
+    "mi",
+    "mis",
+    "molestia",
+    "o",
+    "paciente",
+    "para",
+    "por",
+    "problema",
+    "problemas",
+    "que",
+    "quiero",
+    "se",
+    "sintoma",
+    "sintomas",
+    "soy",
+    "tengo",
+    "un",
+    "una",
+    "unas",
+    "unos",
+    "y",
 }
 
 
@@ -118,32 +178,10 @@ class MedicalTriageService:
             except Exception as exc:
                 logger.warning("triage_gemini_fallback reason=%s", exc)
 
-        fallback = candidate_context[0] if candidate_context else None
-        if fallback is None:
-            selected = specialties[0]
-            return SpecialtyInference(
-                specialty_page_id=selected.page_id,
-                specialty_id=str(selected.properties.get("specialty_id")),
-                specialty_name=str(selected.properties.get("specialty_name")),
-                symptom_summary="No hubo suficiente contexto para resumir el sintoma.",
-                specialty_reason=(
-                    "Se selecciono la primera especialidad activa como respaldo por "
-                    "falta de senales suficientes."
-                ),
-                ai_confidence=None,
-                matched_keywords=[],
-            )
-
-        return SpecialtyInference(
-            specialty_page_id=fallback["page_id"],
-            specialty_id=fallback["specialty_id"],
-            specialty_name=fallback["specialty_name"],
-            symptom_summary=f"Paciente reporta: {symptom_text.strip()}",
-            specialty_reason=(
-                "Se eligio por coincidencia directa con palabras clave del mapa de sintomas."
-            ),
-            ai_confidence=None,
-            matched_keywords=fallback["matched_keywords"],
+        return _build_fallback_specialty_inference(
+            symptom_text=symptom_text,
+            specialties=specialties,
+            candidate_context=candidate_context,
         )
 
     def generate_recommendation_explanation(
@@ -242,6 +280,8 @@ class MedicalTriageService:
             "No diagnostiques ni inventes especialidades.\n"
             "Debes elegir exactamente una especialidad usando solo alguno de los "
             "specialty_id permitidos.\n\n"
+            "Si el texto no corresponde claramente a una especialidad permitida, "
+            "elige Medicina General cuando exista en el listado.\n\n"
             f"Texto del paciente: {symptom_text.strip()}\n\n"
             f"Especialidades permitidas: {specialty_choices}\n\n"
             f"Senales del mapa de sintomas: {candidate_context[:8]}\n\n"
@@ -271,41 +311,33 @@ class MedicalTriageService:
             ],
         }
         payload = self._gemini_client.generate_json(prompt=prompt, schema=schema, temperature=0.2)
-        specialty_id = str(payload.get("specialty_id") or "").strip()
-        if not specialty_id:
-            raise BusinessRuleError("Gemini did not return a valid specialty_id.")
+        confidence = _normalize_confidence(payload.get("ai_confidence"))
+        if confidence is not None and confidence < _GEMINI_MIN_SPECIALTY_CONFIDENCE:
+            raise BusinessRuleError("Gemini returned a low-confidence specialty.")
 
-        specialty = next(
-            (
-                record
-                for record in specialties
-                if str(record.properties.get("specialty_id")) == specialty_id
-            ),
-            None,
+        specialty, correction_reason = _resolve_specialty_from_gemini_payload(
+            payload,
+            specialties,
         )
-        if specialty is None:
-            raise BusinessRuleError("Gemini returned a specialty_id that is not in the catalog.")
-
-        confidence = payload.get("ai_confidence")
-        if isinstance(confidence, (int, float)):
-            confidence = max(0.0, min(1.0, float(confidence)))
-        else:
-            confidence = None
 
         matched_keywords = payload.get("matched_keywords")
         if not isinstance(matched_keywords, list):
             matched_keywords = []
 
+        specialty_reason = str(
+            payload.get("specialty_reason") or "Especialidad seleccionada por Gemini."
+        )
+        if correction_reason:
+            specialty_reason = correction_reason
+
         return SpecialtyInference(
             specialty_page_id=specialty.page_id,
-            specialty_id=specialty_id,
+            specialty_id=str(specialty.properties.get("specialty_id")),
             specialty_name=str(specialty.properties.get("specialty_name")),
             symptom_summary=str(
                 payload.get("symptom_summary") or f"Paciente reporta: {symptom_text.strip()}"
             ),
-            specialty_reason=str(
-                payload.get("specialty_reason") or "Especialidad seleccionada por Gemini."
-            ),
+            specialty_reason=specialty_reason,
             ai_confidence=confidence,
             matched_keywords=[str(item) for item in matched_keywords if item],
         )
@@ -362,22 +394,233 @@ def _build_candidate_context(
         )
     )
 
-    if ordered_candidates:
-        for item in ordered_candidates:
-            item["matched_keywords"] = sorted(set(item["matched_keywords"]))
-        return ordered_candidates
+    for item in ordered_candidates:
+        item["matched_keywords"] = sorted(set(item["matched_keywords"]))
+    return ordered_candidates
 
-    return [
-        {
-            "page_id": specialty.page_id,
-            "specialty_id": str(specialty.properties.get("specialty_id")),
-            "specialty_name": str(specialty.properties.get("specialty_name")),
-            "description": str(specialty.properties.get("description") or ""),
-            "score": 0.0,
-            "matched_keywords": [],
-        }
-        for specialty in specialties
-    ]
+
+def _build_fallback_specialty_inference(
+    *,
+    symptom_text: str,
+    specialties: list[CatalogRecord],
+    candidate_context: list[dict[str, Any]],
+) -> SpecialtyInference:
+    fallback = candidate_context[0] if candidate_context else None
+    if fallback is not None:
+        return SpecialtyInference(
+            specialty_page_id=fallback["page_id"],
+            specialty_id=fallback["specialty_id"],
+            specialty_name=fallback["specialty_name"],
+            symptom_summary=f"Paciente reporta: {symptom_text.strip()}",
+            specialty_reason=(
+                "Se eligio por coincidencia directa con palabras clave del mapa de sintomas."
+            ),
+            ai_confidence=None,
+            matched_keywords=fallback["matched_keywords"],
+        )
+
+    similar_match = _find_similar_specialty_from_text(symptom_text, specialties)
+    if similar_match is not None:
+        specialty, matched_keywords = similar_match
+        return _build_inference_from_specialty(
+            specialty=specialty,
+            symptom_text=symptom_text,
+            specialty_reason=(
+                "Se eligio la especialidad activa mas similar al texto del paciente."
+            ),
+            matched_keywords=matched_keywords,
+        )
+
+    general_specialty = _find_general_medicine_specialty(specialties)
+    if general_specialty is None:
+        raise BusinessRuleError("Medicina General was not found in the specialty catalog.")
+
+    return _build_inference_from_specialty(
+        specialty=general_specialty,
+        symptom_text=symptom_text,
+        specialty_reason=(
+            "No se encontro una especialidad especifica con suficiente similitud; "
+            "se derivo a Medicina General."
+        ),
+        matched_keywords=[],
+    )
+
+
+def _build_inference_from_specialty(
+    *,
+    specialty: CatalogRecord,
+    symptom_text: str,
+    specialty_reason: str,
+    matched_keywords: list[str],
+) -> SpecialtyInference:
+    return SpecialtyInference(
+        specialty_page_id=specialty.page_id,
+        specialty_id=str(specialty.properties.get("specialty_id")),
+        specialty_name=str(specialty.properties.get("specialty_name")),
+        symptom_summary=f"Paciente reporta: {symptom_text.strip()}",
+        specialty_reason=specialty_reason,
+        ai_confidence=None,
+        matched_keywords=matched_keywords,
+    )
+
+
+def _resolve_specialty_from_gemini_payload(
+    payload: dict[str, Any],
+    specialties: list[CatalogRecord],
+) -> tuple[CatalogRecord, str | None]:
+    raw_specialty_id = str(payload.get("specialty_id") or "").strip()
+    raw_specialty_name = str(payload.get("specialty_name") or "").strip()
+
+    specialty = _find_exact_specialty_match(
+        (raw_specialty_id, raw_specialty_name),
+        specialties,
+    )
+    if specialty is not None:
+        return specialty, None
+
+    specialty = _find_similar_specialty_from_labels(
+        (raw_specialty_id, raw_specialty_name),
+        specialties,
+    )
+    if specialty is not None:
+        return (
+            specialty,
+            "Gemini no devolvio un specialty_id exacto; se ajusto a la "
+            "especialidad activa mas similar del catalogo.",
+        )
+
+    raise BusinessRuleError("Gemini returned a specialty that is not similar to the catalog.")
+
+
+def _find_exact_specialty_match(
+    values: tuple[str, ...],
+    specialties: list[CatalogRecord],
+) -> CatalogRecord | None:
+    normalized_values = {_normalize_text(value) for value in values if _normalize_text(value)}
+    if not normalized_values:
+        return None
+
+    for specialty in specialties:
+        specialty_id = _normalize_text(specialty.properties.get("specialty_id"))
+        specialty_name = _normalize_text(specialty.properties.get("specialty_name"))
+        if specialty_id in normalized_values or specialty_name in normalized_values:
+            return specialty
+
+    return None
+
+
+def _find_similar_specialty_from_labels(
+    values: tuple[str, ...],
+    specialties: list[CatalogRecord],
+) -> CatalogRecord | None:
+    best_score = 0.0
+    best_specialty: CatalogRecord | None = None
+
+    for raw_value in values:
+        query = _normalize_text(raw_value)
+        if not query:
+            continue
+
+        for specialty in specialties:
+            candidate_values = (
+                specialty.properties.get("specialty_id"),
+                specialty.properties.get("specialty_name"),
+                specialty.properties.get("description"),
+            )
+            for candidate_value in candidate_values:
+                candidate = _normalize_text(candidate_value)
+                if not candidate:
+                    continue
+
+                score = SequenceMatcher(None, query, candidate).ratio()
+                if query in candidate or candidate in query:
+                    score = max(score, 0.95)
+
+                if score > best_score:
+                    best_score = score
+                    best_specialty = specialty
+
+    if best_specialty is not None and best_score >= _LABEL_SIMILARITY_THRESHOLD:
+        return best_specialty
+    return None
+
+
+def _find_similar_specialty_from_text(
+    symptom_text: str,
+    specialties: list[CatalogRecord],
+) -> tuple[CatalogRecord, list[str]] | None:
+    query = _normalize_text(symptom_text)
+    query_tokens = _meaningful_tokens(query)
+    if not query_tokens:
+        return None
+
+    best_score = 0.0
+    best_specialty: CatalogRecord | None = None
+    best_keywords: list[str] = []
+
+    for specialty in specialties:
+        specialty_values = (
+            specialty.properties.get("specialty_id"),
+            specialty.properties.get("specialty_name"),
+            specialty.properties.get("description"),
+        )
+        candidate = _normalize_text(" ".join(str(value or "") for value in specialty_values))
+        candidate_tokens = _meaningful_tokens(candidate)
+        if not candidate_tokens:
+            continue
+
+        overlap = sorted(query_tokens & candidate_tokens)
+        overlap_score = len(overlap) / max(min(len(query_tokens), len(candidate_tokens)), 1)
+        label_score = max(
+            _similarity_to_catalog_value(query, specialty.properties.get("specialty_id")),
+            _similarity_to_catalog_value(query, specialty.properties.get("specialty_name")),
+        )
+        score = max(overlap_score, label_score)
+
+        if score > best_score:
+            best_score = score
+            best_specialty = specialty
+            best_keywords = overlap
+
+    if best_specialty is not None and best_score >= _TEXT_SIMILARITY_THRESHOLD:
+        return best_specialty, best_keywords
+    return None
+
+
+def _find_general_medicine_specialty(specialties: list[CatalogRecord]) -> CatalogRecord | None:
+    for specialty in specialties:
+        specialty_id = _normalize_text(specialty.properties.get("specialty_id"))
+        specialty_name = _normalize_text(specialty.properties.get("specialty_name"))
+        for value in (specialty_id, specialty_name):
+            if value in _GENERAL_MEDICINE_ALIASES:
+                return specialty
+            tokens = set(value.split())
+            if {"medicina", "general"}.issubset(tokens):
+                return specialty
+            if {"general", "medicine"}.issubset(tokens):
+                return specialty
+
+    return None
+
+
+def _normalize_confidence(value: Any) -> float | None:
+    if not isinstance(value, (int, float)):
+        return None
+    return max(0.0, min(1.0, float(value)))
+
+
+def _similarity_to_catalog_value(query: str, value: Any) -> float:
+    candidate = _normalize_text(value)
+    if not candidate:
+        return 0.0
+    score = SequenceMatcher(None, query, candidate).ratio()
+    if candidate in query or query in candidate:
+        return max(score, 0.95)
+    return score
+
+
+def _meaningful_tokens(value: str) -> set[str]:
+    return {token for token in value.split() if len(token) > 2 and token not in _STOPWORDS}
 
 
 def _matches_phrase(text: str, phrase: str, match_type: str) -> bool:
@@ -434,4 +677,9 @@ def _format_money(amount: float, currency: str | None) -> str:
 def _normalize_text(value: Any) -> str:
     if value is None:
         return ""
-    return " ".join(str(value).strip().lower().split())
+    normalized = unicodedata.normalize("NFKD", str(value))
+    ascii_text = "".join(
+        character for character in normalized if not unicodedata.combining(character)
+    )
+    compact = re.sub(r"[^a-z0-9]+", " ", ascii_text.lower())
+    return " ".join(compact.split())
